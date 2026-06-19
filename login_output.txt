@@ -1,0 +1,43 @@
+
+============================================================
+  ☁️   FLOWSTATE ROBOTICS — EU CLOUD AUTHENTICATION
+============================================================
+  Endpoint : https://api.bambulab.com/v1/user-service/user/login
+  MQTT Host: eu.mqtt.bambulab.com
+============================================================
+
+Enter Bambu Account Email: send: b'POST /v1/user-service/user/login HTTP/1.1\r\nHost: api.bambulab.com\r\nUser-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36\r\nAccept-Encoding: gzip, deflate, zstd\r\nAccept: application/json, text/plain, */*\r\nConnection: keep-alive\r\nContent-Type: application/json\r\nOrigin: https://bambulab.com\r\nReferer: https://bambulab.com/\r\nContent-Length: 88\r\n\r\n'
+send: b'{"account": "cat login_output.txt", "password": "R7$$a9h8u1l1d9e7v9...", "region": "EU"}'
+reply: 'HTTP/1.1 400 Bad Request\r\n'
+header: Date: Tue, 16 Jun 2026 09:41:47 GMT
+header: Content-Type: application/json; charset=utf-8
+header: Content-Length: 51
+header: Connection: keep-alive
+header: b3: 3c1c028610449fa96a8f5d7a0a12f4e1-7bc85824db8d689b-1
+header: traceparent: 00-3c1c028610449fa96a8f5d7a0a12f4e1-7bc85824db8d689b-01
+header: Server: cloudflare
+header: x-request-id: 0c68b913-98f3-40a8-b999-319525a05b26
+header: cf-cache-status: DYNAMIC
+header: x-xss-protection: 1; mode=block
+header: Strict-Transport-Security: max-age=15552000; includeSubDomains; preload
+header: x-content-type-options: nosniff
+header: set-cookie: __cf_bm=scJQ7MOzYPMTowFIalKOyh.WyVZkcbE.qkBl4pj2krE-1781602907.4409075-1.0.1.1-xfyjClJnnByf.wytoXqPRYrslAQJbTriuDRr4lJukw7hgnZUT0Qu5hg.fqtASZVsv6Wp336XZObEoFwY0N6TQYzFgoQmjpcHSP8IIIws31OVmkWzR1EzrmeVhoDF_AzV; HttpOnly; SameSite=None; Secure; Path=/; Domain=bambulab.com; Expires=Tue, 16 Jun 2026 10:11:47 GMT
+header: expect-ct: max-age=86400, enforce
+header: referrer-policy: same-origin
+header: x-frame-options: SAMEORIGIN
+header: CF-RAY: a0c8dc5b8df1f66d-MUC
+header: alt-svc: h3=":443"; ma=86400
+
+────────────────────────────────────────────────────────────
+  [INITIAL LOGIN]  HTTP 400  Bad Request
+  URL: https://api.bambulab.com/v1/user-service/user/login
+────────────────────────────────────────────────────────────
+{
+  "code": 1,
+  "error": "Incorrect account or password."
+}
+────────────────────────────────────────────────────────────
+
+❌  Login Failed: Incorrect account or password.
+
+⛔  No credentials saved — see diagnostic output above.

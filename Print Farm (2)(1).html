@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lindner | Print Orchestration</title>
+
+    <!-- Dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <!-- Premium Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #fdfaf6;
+            --text-main: #1a1a1a;
+            --text-muted: #6b6b6b;
+            --accent-red: #e3000f; /* Matched to Lindner Red */
+            --accent-red-hover: #c4000d;
+            --accent-teal: #63b3ac;
+            --border-light: #e5e0d8;
+            --card-bg: #ffffff;
+
+            --font-serif: 'Fraunces', serif;
+            --font-sans: 'Inter', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Navbar */
+        nav {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 40px 60px;
+            max-width: 1400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .logo-img {
+            height: 40px;
+            object-fit: contain;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 20px auto 60px;
+            padding: 0 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 80px;
+            align-items: stretch;
+            flex: 1;
+        }
+
+        @media (max-width: 900px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                gap: 50px;
+                margin: 20px auto;
+            }
+        }
+
+        /* Left Column: Dropzone Only */
+        .hero-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
+        }
+
+        .upload-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 450px;
+        }
+
+        .dropzone {
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 60px 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+            border-color: var(--accent-red);
+        }
+
+        .drop-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--bg-color);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: var(--accent-red);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);
+            transition: transform 0.5s ease;
+        }
+
+        .dropzone:hover .drop-icon {
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        .drop-title {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #33363f;
+        }
+
+        .drop-subtitle {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        input[type="file"] { display: none; }
+
+        /* Data Display (Hidden until loaded) */
+        .data-display {
+            opacity: 0;
+            pointer-events: none;
+            background: var(--card-bg);
+            border: 1px solid var(--border-light);
+            border-radius: 24px;
+            padding: 50px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+            height: 100%;
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            transition: opacity 0.5s ease;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: var(--border-light);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--accent-red);
+            transition: width 0.5s ease;
+        }
+
+        .data-display.active {
+            opacity: 1;
+            pointer-events: auto;
+            z-index: 3;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .data-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .data-value {
+            font-family: var(--font-serif);
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .data-value.highlight {
+            font-size: 2rem;
+            color: var(--accent-red);
+        }
+
+        .reset-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: left;
+            margin-top: auto;
+            text-decoration: underline;
+            text-decoration-color: transparent;
+            transition: text-decoration-color 0.3s;
+        }
+
+        .reset-btn:hover {
+            text-decoration-color: var(--text-muted);
+        }
+
+        /* Right Column: Configuration Form */
+        .config-section {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            height: 100%;
+            justify-content: center;
+        }
+
+        .setting-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .setting-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .select-wrapper {
+            position: relative;
+        }
+
+        select {
+            width: 100%;
+            padding: 16px 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            background: var(--card-bg);
+            font-family: var(--font-sans);
+            font-size: 1rem;
+            color: var(--text-main);
+            appearance: none;
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        select:hover, select:focus {
+            outline: none;
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+        }
+
+        .select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/200 sameT' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-size: contain;
+            pointer-events: none;
+        }
+
+        /* Toggles */
+        .toggles-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 10px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border-light);
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            accent-color: var(--accent-red);
+            cursor: pointer;
+            border-radius: 6px;
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+            color: var(--text-main);
+            user-select: none;
+        }
+
+        .toggle-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-left: 34px;
+            margin-top: -4px;
+        }
+
+        /* Main Action Button */
+        .generate-btn {
+            background-color: var(--accent-red);
+            color: #ffffff;
+            border: none;
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-family: var(--font-sans);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            align-self: flex-start;
+            box-shadow: 0 8px 20px rgba(227, 0, 15, 0.25);
+        }
+
+        .generate-btn:hover:not(:disabled) {
+            background-color: var(--accent-red-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(227, 0, 15, 0.35);
+        }
+
+        .generate-btn:disabled {
+            background-color: #e2e2e2;
+            color: #a0a0a0;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Toast Log */
+        .toast-log {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #222;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-family: var(--font-sans);
+            font-size: 0.9rem;
+            font-weight: 500;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+
+        .toast-log.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        #error-monitor {
+            background: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.75rem;
+            padding: 15px;
+            border-radius: 12px;
+            height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #333;
+            margin-top: 30px;
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+        }
+    </style>
+
+</head>
+<body>
+
+    <!-- Minimalist Navbar with Lindner Logo -->
+    <nav>
+        <img src="lindner-logo.png" alt="Lindner" class="logo-img" onerror="this.outerHTML='<h1 style=\'font-family: Arial; font-weight: 900; color: #e3000f; font-size: 2rem;\'>Lindner</h1>'">
+    </nav>
+
+    <!-- Main Content Grid -->
+    <div class="main-container">
+
+        <!-- Left Section: Dropzone & Data -->
+        <div class="hero-section">
+            <div class="upload-container">
+                <!-- Dropzone State -->
+                <div class="dropzone" id="uploadZone">
+                    <div class="drop-icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    </div>
+                    <div class="drop-title">Drop your .3mf file</div>
+                    <div class="drop-subtitle">or click to select from your device</div>
+                    <input type="file" id="fileInput" accept=".3mf">
+                </div>
+
+                <!-- Data Display State -->
+                <div class="data-display" id="dataDisplay">
+                    <div class="data-row">
+                        <div class="data-label">Machine State</div>
+                        <div class="data-value highlight" id="machineState">IDLE</div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-label">Current Progress</div>
+                        <div class="data-value" id="printProgress">0%</div>
+                    </div>
+                    <div class="progress-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                    <div class="data-row">
+                        <div class="data-label">Layer Progress</div>
+                        <div class="data-value" id="layerProgress">0 / 0</div>
+                    </div>
+                    <div class="data-row" style="border-bottom: none;">
+                        <div class="data-label">Est. Time Remaining</div>
+                        <div class="data-value" style="font-size: 1.1rem; color: var(--text-muted);" id="timeRemaining">--</div>
+                    </div>
+
+                    <button class="reset-btn" onclick="resetApp()">Upload a different file</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Section: Configuration -->
+        <div class="config-section">
+
+            <div class="setting-group">
+                <label class="setting-label">Automation Cycles</label>
+                <div class="select-wrapper">
+                    <select id="loopCount">
+                        <option value="2">2 Consecutive Prints</option>
+                        <option value="3">3 Consecutive Prints</option>
+                        <option value="4" selected>4 Consecutive Prints</option>
+                        <option value="5">5 Consecutive Prints</option>
+                        <option value="10">10 Consecutive Prints</option>
+                        <option value="20">20 Consecutive Prints</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Bed Release Temperature</label>
+                <div class="select-wrapper">
+                    <select id="bedCoolTemp">
+                        <option value="20">20°C (Maximum adherence release)</option>
+                        <option value="25" selected>25°C (Recommended standard)</option>
+                        <option value="30">30°C (Faster cycle time)</option>
+                        <option value="35">35°C (For specialized plates)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Ejection Sweeps per Part</label>
+                <div class="select-wrapper">
+                    <select id="pushAttempts">
+                        <option value="1">1 Sweep</option>
+                        <option value="2" selected>2 Sweeps (Guaranteed release)</option>
+                        <option value="3">3 Sweeps</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <label class="setting-label">Toolhead Sweep Speed</label>
+                <div class="select-wrapper">
+                    <select id="pushSpeed">
+                        <option value="100">100 mm/s (Gentle)</option>
+                        <option value="150" selected>150 mm/s (Standard Force)</option>
+                        <option value="200">200 mm/s (Aggressive Force)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="toggles-container">
+                <label class="toggle-item">
+                    <input type="checkbox" id="enableFanCooling" checked>
+                    <span class="toggle-label">Active Chamber Cooling</span>
+                </label>
+                <div class="toggle-desc">Engages the side auxiliary fan at 100% to rapidly cool the bed.</div>
+
+                <label class="toggle-item" style="margin-top: 10px;">
+                    <input type="checkbox" id="enableSafetyPause" checked>
+                    <span class="toggle-label">Manual Verification Pause</span>
+                </label>
+                <div class="toggle-desc">Pauses the printer after ejection for visual inspection before starting the next loop.</div>
+            </div>
+
+            <button class="generate-btn" id="convertBtn" disabled>Start Orchestration</button>
+
+            <div id="error-monitor">Initializing log monitor...</div>
+        </div>
+    </div>
+
+    <!-- Floating Toast Notification -->
+    <div class="toast-log" id="toastLog">Waiting for file...</div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadZone = document.getElementById('uploadZone');
+        const convertBtn = document.getElementById('convertBtn');
+        const dataDisplay = document.getElementById('dataDisplay');
+        const toastLog = document.getElementById('toastLog');
+
+        let toastTimeout;
+
+        function showToast(message, isPersistent = false) {
+            toastLog.textContent = message;
+            toastLog.classList.add('show');
+            clearTimeout(toastTimeout);
+            if (!isPersistent) {
+                toastTimeout = setTimeout(() => {
+                    toastLog.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        function resetApp() {
+            uploadZone.style.opacity = '1';
+            uploadZone.style.pointerEvents = 'auto';
+            dataDisplay.classList.remove('active');
+            convertBtn.disabled = true;
+            fileInput.value = '';
+            convertBtn.textContent = 'Start Orchestration';
+        }
+
+        // Drag and Drop Events
+        uploadZone.addEventListener('click', () => fileInput.click());
+        uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', e => {
+            if (e.target.files[0]) handleFile(e.target.files[0]);
+        });
+
+        async function handleFile(file) {
+            showToast('File accepted. Ready for orchestration...', true);
+
+            // Update UI State to show data panel
+            uploadZone.style.opacity = '0';
+            uploadZone.style.pointerEvents = 'none';
+            dataDisplay.classList.add('active');
+            convertBtn.disabled = false;
+        }
+
+        // --- LIVE TELEMETRY SYNC ---
+        async function updateLiveStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+
+                // Update Text Fields
+                document.getElementById('machineState').textContent = data.state || 'UNKNOWN';
+                document.getElementById('printProgress').textContent = `${data.print_progress || 0}%`;
+                document.getElementById('layerProgress').textContent = `${data.current_layer || 0} / ${data.total_layers || 0}`;
+                document.getElementById('timeRemaining').textContent = `${data.total_estimated_time || '--'} min`;
+
+                // Update Progress Bar
+                const progress = data.print_progress || 0;
+                document.getElementById('progressBar').style.width = `${progress}%`;
+            } catch (e) {
+                console.error("Telemetry sync failed:", e);
+            }
+        }
+
+        // Poll status every 1 second
+        setInterval(updateLiveStatus, 1000);
+
+        // --- LOG MONITOR SYNC ---
+        async function updateLogs() {
+            try {
+                const response = await fetch('/api/logs');
+                const logs = await response.json();
+                const monitor = document.getElementById('error-monitor');
+                if (Array.isArray(logs)) {
+                    monitor.innerText = logs.join('\\n');
+                } else {
+                    monitor.innerText = 'Error loading logs...';
+                }
+            } catch (e) {
+                console.error("Log sync failed:", e);
+            }
+        }
+
+        // Poll logs every 5 seconds
+        setInterval(updateLogs, 5000);
+        updateLogs(); // Initial call
+
+        // --- BACKEND ORCHESTRATION TRIGGER ---
+        convertBtn.addEventListener('click', async () => {
+            if (convertBtn.disabled) return;
+            if (!fileInput.files[0]) {
+                showToast('Please select a .3mf file first.');
+                return;
+            }
+
+            const loopCount = document.getElementById('loopCount').value;
+            const bedTemp = document.getElementById('bedCoolTemp').value;
+
+            convertBtn.disabled = true;
+            convertBtn.textContent = 'Processing...';
+            showToast('Uploading to Sentinel Pipeline...', true);
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('loops', loopCount);
+            formData.append('temp', bedTemp); // Additional param for backend to use
+
+            try {
+                const response = await fetch('/upload-and-slice', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    showToast('Slicing initiated. Monitoring print...', true);
+                    // We keep the button disabled until the print actually starts or fails
+                    // or simply re-enable it after a delay.
+                    setTimeout(() => {
+                        convertBtn.disabled = false;
+                        convertBtn.textContent = 'Start Orchestration';
+                    }, 5000);
+                } else {
+                    throw new Error(result.detail || 'Upload failed');
+                }
+            } catch (error) {
+                showToast(`Error: ${error.message}`);
+                convertBtn.disabled = false;
+                convertBtn.textContent = 'Start Orchestration';
+            }
+        });
+    </script>
+</body>
+</html>

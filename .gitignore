@@ -1,0 +1,37 @@
+# ── Secrets — NEVER commit these ──────────────────────
+.env
+
+# ── Python ─────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.spec
+
+# ── Virtual environments ───────────────────────────────
+venv/
+.venv/
+env/
+
+# ── OS artifacts ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs & runtime data ────────────────────────────────
+sentinel_logs/
+*.log
+
+# ── Upload staging ─────────────────────────────────────
+uploads/
+
+# ── IDE ────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+
+# ── Temporary files ────────────────────────────────────
+*.tmp
+inventory.tmp
