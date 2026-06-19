@@ -1,11 +1,8 @@
-import os
-import json
-import logging
-import time
+import streamlit as st
 import requests
 import pandas as pd
-import streamlit as st
-from streamlit_lottie import st_lottie
+import logging
+import time
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
@@ -19,7 +16,12 @@ log = logging.getLogger("sentinel.dashboard")
 
 # --- CONSTANTS ---
 INVENTORY_FILE = "inventory.json"
-LOTTIE_PRINTER_URL = "https://assets5.lottiefiles.com/packages/lf20_T69P8A.json"
+
+st.set_page_config(
+    page_title="NodeForge Sentinel | SpoolVault",
+    page_icon="🧵",
+    layout="wide"
+)
 
 # ── SESSION STATE MANAGEMENT ───────────────────────────────────────────────
 def _init_session_state():
@@ -41,6 +43,8 @@ def _init_session_state():
 def _load_inventory() -> Dict[str, Any]:
     """Loads inventory from a local JSON file with error handling."""
     try:
+        import os
+        import json
         if not os.path.exists(INVENTORY_FILE):
             initial_data = {"spools": [], "last_updated": None, "schema_version": 1}
             _save_inventory(initial_data)
@@ -55,6 +59,7 @@ def _load_inventory() -> Dict[str, Any]:
 def _save_inventory(data: Dict[str, Any]) -> None:
     """Persists inventory data to the local JSON file."""
     try:
+        import json
         data["last_updated"] = datetime.utcnow().isoformat()
         with open(INVENTORY_FILE, "w") as f:
             json.dump(data, f, indent=4)
@@ -84,19 +89,16 @@ def _apply_design_system():
             --status-error: #e74c3c;
         }
 
-        /* Main Application Background */
         [data-testid="stAppViewContainer"] {
             background-color: var(--bg-primary);
             color: var(--text-primary);
         }
 
-        /* Sidebar Styles */
         [data-testid="stSidebar"] {
             background-color: var(--bg-secondary);
             border-right: 1px solid var(--border);
         }
 
-        /* Glass Card Component */
         .glass-card {
             background: var(--surface);
             backdrop-filter: blur(12px) saturate(160%);
@@ -107,7 +109,6 @@ def _apply_design_system():
             margin-bottom: 20px;
         }
 
-        /* Metric Overrides */
         [data-testid="stMetric"] {
             background: var(--surface);
             border-radius: 12px;
@@ -117,7 +118,6 @@ def _apply_design_system():
             box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
-        /* Button Styling */
         div.stButton > button {
             background: var(--bg-secondary);
             color: var(--accent-gold);
@@ -135,7 +135,6 @@ def _apply_design_system():
             transform: translateY(-1px);
         }
 
-        /* Hide Streamlit Branding */
         #MainMenu, footer, header {
             visibility: hidden;
             display: none !important;
@@ -147,7 +146,6 @@ def _apply_design_system():
 
 # ── HARDWARE INTERFACE ──────────────────────────────────────────────────────
 def _send_sweep_command():
-    """Dispatches a direct hardware trigger to the ESP32 sweeper arm."""
     ESP32_ENDPOINT = "http://10.254.244.107/sweep"
     try:
         response = requests.post(
@@ -168,7 +166,6 @@ def _send_sweep_command():
         st.sidebar.error(f"Unexpected error: {type(e).__name__}")
 
 def _render_manual_override_panel():
-    """Renders the direct hardware control panel in the sidebar."""
     st.sidebar.markdown("---")
     st.sidebar.markdown("**Manual Override**", unsafe_allow_html=False)
     st.sidebar.caption("Direct hardware control. Bypasses automation scheduler.")
@@ -191,14 +188,7 @@ def _render_manual_override_panel():
     if sweep_triggered:
         _send_sweep_command()
 
-# ── UI COMPONENTS ──────────────────────────────────────────────────────────
-def _load_lottie(url: str):
-    try:
-        r = requests.get(url)
-        return r.json() if r.status_code == 200 else None
-    except Exception:
-        return None
-
+# ── UI COMPONENTS ────────────────────────────────────────────────────────
 def _render_telemetry_card():
     """Renders the live printer status with glassmorphism metrics."""
     with st.container():
@@ -214,9 +204,7 @@ def _render_telemetry_card():
             st.metric("Est. Time Left", f"{STATUS.total_estimated_time} min")
 
         if STATUS.gcode_state == "PRINTING":
-            lottie_json = _load_lottie(LOTTIE_PRINTER_URL)
-            if lottie_json:
-                st_lottie(lottie_json, height=120, key="printer_anim")
+            st.status("⚙️ Printer is currently active and processing G-code...", expanded=False)
 
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -232,10 +220,8 @@ def _render_inventory_card():
         if not spools:
             st.info("No spools found in local inventory.json.")
         else:
-            # Format data for st.dataframe
             records = []
             for idx, s in enumerate(spools):
-                # Synergy: Highlight if this material is currently printing
                 status = "Available"
                 if STATUS.gcode_state == "PRINTING" and s.get("material") == "PLA":
                     status = "In Use"
@@ -282,7 +268,7 @@ def _render_inventory_card():
             )
         st.markdown('</div>', unsafe_allow_html=True)
 
-# ── MAIN ENTRY POINT ─────────────────────────────────────────────────────────
+# ── MAIN ENTRY POINT ────────────────────────────────────────────────────────
 def main():
     _init_session_state()
     _apply_design_system()
@@ -290,17 +276,14 @@ def main():
     st.title("NodeForge Sentinel")
     st.markdown("Industrial Fleet Management Suite")
 
-    # Layout
     _render_telemetry_card()
     st.markdown("<br>", unsafe_allow_html=True)
     _render_inventory_card()
 
-    # Sidebar
     _render_manual_override_panel()
 
-    # Footer Status
     mqtt_status = "🟢 Connected" if STATUS.mqtt_connected else "🔴 Disconnected"
-    st.markdown(f"<div style='text-align: center; color: var(--text-muted); margin-top: 40px;'>Telemetry: {mqtt_status} | Device: {BAMBU_DEVICE_ID}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='text-align: center; color: var(--text-muted); margin-top: 40px;'>Telemetry: {mqtt_status} | Device: {BAMBU_DEVICE_ID}P</div>", unsafe_allow_t_html=True)
 
 if __name__ == "__main__":
     main()
