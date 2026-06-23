@@ -1,28 +1,48 @@
 import requests
 import logging
-from core.config import ESP32_IP
+from typing import Tuple
+from core.config import ESP32_IP, ESP32_PORT
 
 log = logging.getLogger("sentinel.actuator")
 
-def trigger_sweeper_arm():
+class ActuatorService:
     """
-    Triggers the physical bed sweep actuator via a POST request.
-    Endpoint: http://<ESP32_IP>/sweep
+    Hardened interface for physical hardware triggers via ESP32 HTTP endpoints.
     """
-    url = f"http://{ESP32_IP}/sweep"
+    def __init__(self):
+        self.base_url = f"http://{ESP32_IP}:{ESP32_PORT}"
 
-    try:
-        log.info(f"[ACTUATOR] Triggering sweeper arm POST request to {url}...")
-        # Using a POST request as specified by the hardware requirements
-        response = requests.post(url, timeout=5)
+    def trigger_sweeper_arm(self) -> Tuple[bool, str]:
+        """
+        Sends a hardened POST request to the sweep actuator.
+        Returns (success_boolean, status_message).
+        """
+        endpoint = f"{self.base_url}/sweep"
 
-        if response.status_code == 200:
-            log.info("[ACTUATOR] Sweeper arm successfully triggered.")
-            return True
-        else:
-            log.error(f"[ACTUATOR] Sweeper arm request failed with status {response.status_code}")
-            return False
+        try:
+            log.info(f"[ACTUATOR] Dispatching POST request to sweeper arm: {endpoint}")
 
-    except requests.exceptions.RequestException as e:
-        log.error(f"[ACTUATOR] Connection error while triggering sweeper arm: {e}")
-        return False
+            # Using a timeout to prevent the main loop from hanging if ESP32 crashes
+            response = requests.post(
+                endpoint,
+                timeout=5,
+                headers={"Content-Type": "application/json"},
+                json={"command": "trigger_sweep", "timestamp": "system_clock"}
+            )
+
+            if response.status_code == 200:
+                log.info("[ACTUATOR] Sweeper arm acknowledged command successfully.")
+                return True, "success"
+
+            log.error(f"[ACTUATOR] Hardware returned non-200 response: {response.status_code}")
+            return False, f"http_error_{response.status_code}"
+
+        except requests.exceptions.ConnectTimeout:
+            log.error("[ACTUATOR] Connection timeout: ESP32 is unreachable.")
+            return False, "timeout"
+        except requests.exceptions.ConnectionError:
+            log.error("[ACTUATOR] Connection refused: ESP32 network interface is down.")
+            return False, "connection_refused"
+        except Exception as e:
+            log.error(f"[ACTUATOR] Unexpected failure in hardware bridge: {e}")
+            return False, "internal_exception"
