@@ -89,7 +89,10 @@ class BambuMqttClient:
         STATUS.update(
             gcode_state=parsed_status.gcode_state,
             print_progress=int(parsed_status.print_progress),
-            total_estimated_time=parsed_status.remaining_time
+            total_estimated_time=parsed_status.remaining_time,
+            nozzle_temp=parsed_status.nozzle_temp,
+            bed_temp=parsed_status.bed_temp,
+            ams_data=parsed_status.ams_slots
         )
         log.debug("[TELEMETRY] State updated: %s (%d%%)", parsed_status.gcode_state, parsed_status.print_progress)
 

@@ -27,6 +27,9 @@ class SentinelStatus:
     total_layers:             int = 0
     print_progress:           int = 0
     gcode_state:              str = "IDLE"
+    nozzle_temp:              float = 0.0
+    bed_temp:                 float = 0.0
+    ams_data:                 Dict[str, Any] = field(default_factory=dict)
 
     # State Fields
     state:                    SentinelState = SentinelState.IDLE
